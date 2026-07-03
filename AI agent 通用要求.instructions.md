@@ -23,9 +23,16 @@ Provide project context and coding guidelines that AI should follow when generat
 
 - **必须执行** ：AI agent 在使用 `vscode_askQuestions` 工具向用户提问时，无论提问内容是什么，**必须确保每个问题都提供自定义输入栏**（即不得设置 `allowFreeformInput: false`），使用户既可以选项选择，也能自由填写定制内容。这是保证用户始终能表达选项之外意图的最低要求。
 
+- **必须执行** ：AI agent 在执行终端命令时，同一任务下应优先使用 `run_in_terminal` 的 `mode="async"` 模式，并尽量复用在同一任务中已创建的终端，避免为每条命令都打开新终端。这有助于保持终端环境的一致性和工作目录的连续性。
+
+- **必须执行** ：AI agent 在需要收集信息时（包括但不限于：查询代码库、搜索文件、读取远程设备状态、抓取网页等），如果有专用的 sub-agent 可用且任务可由 sub-agent 独立完成，**应优先通过 `runSubagent` 工具委派给对应的 sub-agent**，而不是在当前会话中手动链式调用多个工具。这有助于隔离上下文消耗，避免主对话膨胀。任务结束后，sub-agent 返回的精炼结果由 main agent 整合使用。
+
+当前可用 sub-agent 列表见 `sub-agent 使用指南.instructions.md`。
+
 - 我们的项目目录中存在以下文件供 ai agent 作为上下文信息：
   - README.md：项目的功能说明和使用指南
   - PLAN.md：项目的整体开发方案
   - DEVELOPMENT.md：ai在开发过程中记录的操作历史和必要信息
   - TAKEOVER.md：项目接管信息，描述项目在什么开发进度下交接、以什么方式对接、任务和环境有什么变化、工作流如何与本地工作流匹配。存在此文件则代表项目发生过交接。
   - reports/：测试报告文件夹，记录测试目的、方法、结果和结论等必要信息
+

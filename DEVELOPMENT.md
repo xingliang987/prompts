@@ -35,3 +35,39 @@
   - `代码示范.instructions.md`：UTF-8 BOM → UTF-8 no BOM
   - `远程开发指南.instructions.md`：UTF-8 BOM → UTF-8 no BOM
 - **效果**：去除 BOM 后，VS Code 能正确解析 YAML 前置元数据中的 `description` 和 `applyTo` 字段，系统自动载入机制将能匹配并加载这两个文件。
+
+### 2026-07-03 — 新增终端复用规则到「AI agent 通用要求.instructions.md」
+
+- **操作目的**：添加一条强制性规则，要求 AI agent 在同一任务下优先使用 `run_in_terminal` 的 `mode="async"` 模式，并尽量复用已创建的终端，避免为每条命令打开新终端。
+- **操作方法**：在 `AI agent 通用要求.instructions.md` 的 `vscode_askQuestions` 规则之后、项目文件列表之前插入新的规则项。
+- **变更文件**：`AI agent 通用要求.instructions.md`
+- **规则内容**：同一任务下优先使用 `mode="async"`，复用已有终端，保持终端环境和工作目录的连续性。
+
+### 2026-07-03 — 新增 RemoteInfoCollector 自定义 agent
+
+- **操作目的**：创建一个专用 sub-agent，用于在远端设备上搜集信息（系统状态、日志、配置、进程等），设计原则为"严边界，宽行为"——在禁止修改/删除/安装等破坏性操作的前提下，允许自由 SSH 连接远端、执行诊断命令、搜索网络。
+- **操作方法**：在 `prompts/` 目录下创建 `RemoteInfoCollector.agent.md`，配置 `tools: [read, search, execute, web]`，包含完整的禁止行为清单、允许行为清单、SSH 操作规范、常用诊断命令速查表和结构化输出模板。
+- **设计要点**：
+  - **严边界**：明确禁止修改文件、安装软件包、修改配置、启停服务、执行破坏性命令、修改本地文件、写入数据库等 7 类操作
+  - **宽行为**：允许 SSH 连接、查看系统状态、读日志/配置、检查网络/硬件、环境信息收集、本地文件读取、网络搜索、Git 只读查询等 8 类操作
+  - 参考 `remote-dev` SKILL 的 SSH 工作流模式（超时设置、终端复用等）
+  - `user-invocable: true`，支持作为 sub-agent 被调用，也支持在代理选择器中直接选择使用
+
+### 2026-07-03 — 重构 RemoteInfoCollector 输出格式：只给事实，支持上级指定收集范围
+
+- **操作目的**：优化 sub-agent 的输出格式，使其更适合上级 agent 程序化读取；删除分析建议类输出，仅返回结构化事实数据；新增 `--collect=<类别>` 支持上级按需指定返回类别。
+- **操作方法**：重写 `RemoteInfoCollector.agent.md` 第4步（结构化汇总）的输出模板，将原自然语言段落改为 `[COLLECT_RESULT]` / `=== 区块 ===` 的键值对格式，每个区块按类别组织（SYSTEM、RESOURCE、PROCESS、LOG、NETWORK、HARDWARE、ENV、CONFIG），同时移除原"分析建议"和"参考链接"部分，以 `[WEB_REF]` 轻量替代网络引用。新增 `--collect=<类别>` 指令支持上级按需筛选返回内容。
+- **变更要点**：
+  - 自然语言报告 → 结构化键值区块格式
+  - 移除"分析建议""参考链接"→ 改为仅 `[WEB_REF]` 列出 URL
+  - 新增 `--collect` 参数，支持上级 agent 指定返回类别
+
+### 2026-07-03 — 新增 sub-agent 使用指南.instructions.md，通用要求中移除 agent 表格
+
+- **操作目的**：将 sub-agent 列表从 `AI agent 通用要求.instructions.md` 中分离出来，创建独立的 `sub-agent 使用指南.instructions.md`，集中管理所有可用 sub-agent 的用途、场景和调用方式；同时统一要求所有 sub-agent 调用时必须指定 `DeepSeek V4 Flash (copilot)` 模型。
+- **操作方法**：
+  - `AI agent 通用要求.instructions.md`：将 sub-agent 表格替换为指向新指南文件的一行引用，保留"优先使用 sub-agent"的规则不变
+  - 新建 `sub-agent 使用指南.instructions.md`：包含总则、3个可用 agent 的详细属性表（Explore / RemoteInfoCollector / Study）、委派决策速查和注意事项
+- **变更要点**：
+  - sub-agent 列表从通用要求中解耦，后续新增 agent 只需更新使用指南即可
+  - 新增模型指定规则：所有 sub-agent 调用必须传 `model="DeepSeek V4 Flash (copilot)"`
