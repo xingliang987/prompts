@@ -5,34 +5,125 @@ applyTo: **
 
 <!-- Tip: Use /create-instructions in chat to generate content with agent assistance -->
 
-Provide project context and coding guidelines that AI should follow when generating code, answering questions, or reviewing changes.
+AI agent 行为规则清单（YAML 结构化）。每条规则定义 `when → do` 映射，AI 可直接解析为内部决策表。
 
-- 在程序中加入必要的注释，特别是对于复杂的逻辑或算法，以及不同功能模块的分割和说明，以帮助其他开发者理解代码的意图和实现细节。注释应该清晰、简洁，并且与代码保持同步，避免过时或误导性的注释。注释的文字说明应使用简体中文。
+```yaml
+# ===== 行为规则 (MUST/SHOULD) =====
+rules:
 
-- **必须执行** ：AI agent 在任何项目目录中进行文件创建、删除、移动，代码编写、删改等操作时，必须将操作记录的概述写入项目文件内的 DEVELOPMENT.md 中，如果没有 DEVELOPMENT.md ，则需要在项目根目录创建一个。除了写入操作记录外，还需要对项目内容进行简要的说明，对每次的操作做简要说明，要求说明操作目的，操作方法。操作记录按照时间顺序写入，每次写入时标记时间戳。此外，也可以在 DEVELOPMENT.md 中记录开发过程中需要的必要信息，需要注意的问题等。操作记录必须在每次会话结束前写入，确保每次操作都有记录。记录在 DEVELOPMENT.md 中的操作记录必须有完整的时间戳，格式为：YYYY-MM-DD HH:mm:ss，确保操作记录的可追溯性。
+  # --- 注释 ---
+  - id: C001
+    priority: SHOULD
+    when: 生成或修改代码时，遇到复杂逻辑、算法、模块分割
+    do: 加入必要注释，说明意图和实现细节
+    lang: zh-cn
+    quality: 清晰简洁，与代码同步，避免过时或误导性注释
 
-- AI agent在进行测试任务后，必须撰写测试报告（如果只有语法验证和构建则不需要撰写报告），记录在项目目录的reports文件夹，或其他用户指定的目录下。测试报告的叙述内容应使用简体中文。报告内容应包括测试目的、测试方法、测试结果、结论等必要信息，确保测试过程和结果的清晰记录和可追溯性。测试报告应该详细描述测试的步骤和结果，以便其他开发者能够理解测试的内容和意义，并且能够根据报告进行相应的调整和改进。
+  # --- 操作记录 ---
+  - id: C002
+    priority: MUST
+    when: 在任何项目目录中进行文件创建/删除/移动、代码编写/删改
+    do: 将操作概述写入项目根目录 DEVELOPMENT.md
+    details:
+      file: DEVELOPMENT.md
+      create_if_missing: true
+      content: [操作目的, 操作方法]
+      sort: 按时间顺序
+      timestamp_format: YYYY-MM-DD_HH:mm:ss
+      write_time: 每次会话结束前
+    notes: 也可记录开发过程中的必要信息和注意事项
+    sub_rules:
+      - id: C002a
+        when: 加入时间戳时，其他记录没有完整格式的时间戳
+        do: 不需要管其他记录，在本次记录写入正确格式的时间戳
+        forbid: 仿照其他记录的时间戳格式写入
 
-- AI agent在用户要求撰写报告时，必须在项目目录的reports文件夹生成.md格式的报告文件，如果没有reports文件夹，则需要在项目根目录创建一个。报告应该至少包含一个时间戳。
+  # --- 测试报告 ---
+  - id: C003
+    priority: MUST
+    when: 完成测试任务后
+    skip_when: 纯语法验证或构建
+    do: 在项目 reports/ 目录下生成 .md 测试报告
+    details:
+      create_dir_if_missing: true
+      lang: zh-cn
+      content_sections: [测试目的, 测试方法, 测试结果, 结论]
+    minimum: 至少包含一个时间戳
 
-- AI agent在修改代码添加新功能时，应该尽可能考虑旧方法的复用，或模块化改造，尽可能避免重复的功能实现，保持代码的简洁和可维护性。
+  # --- 用户要求报告 ---
+  - id: C004
+    priority: MUST
+    when: 用户要求撰写报告
+    do: 在项目根目录 reports/ 下生成 .md 报告
+    details:
+      create_dir_if_missing: true
+    minimum: 至少包含一个时间戳
 
-- AI agent在实现新功能后，必须在README.md中更新功能说明，确保文档与代码保持同步，便于其他开发者理解新功能的用途和使用方法。功能说明应该清晰、简洁，并且包含必要的示例和使用指南，以及主要通信接口的说明，以帮助其他开发者快速上手和正确使用新功能。如果没有README.md，则需要在项目根目录创建一个，并撰写项目的功能说明和使用指南。
+  # --- 功能复用 ---
+  - id: C005
+    priority: SHOULD
+    when: 修改代码、添加新功能
+    do: 优先复用旧方法或模块化改造，避免重复实现
+    goal: 保持代码简洁、可维护
 
-- AI agent 在工作过程中，遇到无法独立处理的信息缺失（如未知的路径、账号、配置项、技术选型等）或需要用户决策的关键方案选择时，应主动使用 `vscode_askQuestions` 工具向用户提问，而不是猜测或使用默认值。优先补齐最少必要信息，避免一次性追问过多细节。
+  # --- README 同步 ---
+  - id: C006
+    priority: MUST
+    when: 实现新功能后
+    do: 更新 README.md（不存在则创建），保持文档与代码同步
+    details:
+      readme_content: [功能说明, 使用示例, 使用指南, 主要通信接口说明]
 
-- **必须执行** ：AI agent 在使用 `vscode_askQuestions` 工具向用户提问时，无论提问内容是什么，**必须确保每个问题都提供自定义输入栏**（即不得设置 `allowFreeformInput: false`），使用户既可以选项选择，也能自由填写定制内容。这是保证用户始终能表达选项之外意图的最低要求。
+  # --- 信息缺失处理与提问 ---
+  - id: C007
+    priority: MUST
+    when:
+      - 遇到无法独立处理的信息缺失（未知路径/账号/配置项/技术选型等）
+      - 需要用户决策的关键方案选择
+    do: 使用 vscode_askQuestions 工具主动提问
+    forbid: 猜测或使用默认值
+    strategy: 优先补齐最少必要信息，避免一次性追问过多细节
+    sub_rules:
+      - id: C007a
+        when: 使用 vscode_askQuestions 提问时
+        must: 每个问题都必须提供自定义输入栏
+        forbid: 设置 allowFreeformInput: false
+        reason: 保证用户始终能表达选项之外意图
 
-- **必须执行** ：AI agent 在执行终端命令时，同一任务下应优先使用 `run_in_terminal` 的 `mode="async"` 模式，并尽量复用在同一任务中已创建的终端，避免为每条命令都打开新终端。这有助于保持终端环境的一致性和工作目录的连续性。
+  # --- 终端命令执行 ---
+  - id: C008
+    priority: MUST
+    when: 需要执行终端命令时
+    do: 同一任务下优先使用 run_in_terminal mode="async"
+    terminal_reuse: 尽量复用同一任务中已创建的终端
+    forbid: 为每条命令打开新终端
+    reason: 保持终端环境一致性和工作目录连续性
 
-- **必须执行** ：AI agent 在需要收集信息时（包括但不限于：查询代码库、搜索文件、读取远程设备状态、抓取网页等），如果有专用的 sub-agent 可用且任务可由 sub-agent 独立完成，**应优先通过 `runSubagent` 工具委派给对应的 sub-agent**，而不是在当前会话中手动链式调用多个工具。这有助于隔离上下文消耗，避免主对话膨胀。任务结束后，sub-agent 返回的精炼结果由 main agent 整合使用。
+  # --- Sub-agent 委派 ---
+  - id: C009
+    priority: MUST
+    when:
+      - 需要收集信息（查询代码库、搜索文件、读取远程设备状态、抓取网页等）
+      - 有专用的 sub-agent 可用
+      - 任务可由 sub-agent 独立完成
+    do: 优先通过 runSubagent 委派给对应 sub-agent
+    forbid: 在当前会话中手动链式调用多个工具
+    reason: 隔离上下文消耗，避免主对话膨胀
+    then: sub-agent 返回精炼结果后，由 main agent 整合使用
+    ref: sub-agent 使用指南.instructions.md
+```
 
-当前可用 sub-agent 列表见 `sub-agent 使用指南.instructions.md`。
+---
 
-- 我们的项目目录中存在以下文件供 ai agent 作为上下文信息：
-  - README.md：项目的功能说明和使用指南
-  - PLAN.md：项目的整体开发方案
-  - DEVELOPMENT.md：ai在开发过程中记录的操作历史和必要信息
-  - TAKEOVER.md：项目接管信息，描述项目在什么开发进度下交接、以什么方式对接、任务和环境有什么变化、工作流如何与本地工作流匹配。存在此文件则代表项目发生过交接。
-  - reports/：测试报告文件夹，记录测试目的、方法、结果和结论等必要信息
+## 项目上下文文件索引
+
+以下文件存在于项目目录中，供 AI agent 作为上下文信息参考：
+
+| 文件 | 用途说明 |
+|------|----------|
+| `README.md` | 项目的功能说明和使用指南 |
+| `PLAN.md` | 项目的整体开发方案 |
+| `DEVELOPMENT.md` | AI 在开发过程中记录的操作历史和必要信息 |
+| `TAKEOVER.md` | 项目接管信息。描述交接进度、对接方式、环境变化、工作流匹配。存在即代表项目发生过交接 |
+| `reports/` | 测试报告文件夹，记录测试目的、方法、结果和结论等必要信息 |
 

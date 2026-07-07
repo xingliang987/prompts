@@ -71,3 +71,42 @@
 - **变更要点**：
   - sub-agent 列表从通用要求中解耦，后续新增 agent 只需更新使用指南即可
   - 新增模型指定规则：所有 sub-agent 调用必须传 `model="DeepSeek V4 Flash (copilot)"`
+
+### 2026-07-06 — 新增 Search-readonly 和 Search-command 两个自定义 agent
+
+- **操作目的**：创建两个专用搜索 agent，替代已不可用的 Explore subagent：
+  - **Search-readonly**：纯只读搜索，通过文件读取、代码搜索、网络浏览搜集信息，无命令执行能力
+  - **Search-command**：命令行只读搜索，通过终端命令（Select-String、Get-ChildItem、git log 等）高效搜索本地代码
+- **操作方法**：
+  - 在 `prompts/` 目录下创建 `Search-readonly.agent.md`，配置 `tools: [read, search, web]`
+  - 在 `prompts/` 目录下创建 `Search-command.agent.md`，配置 `tools: [read, search, execute]`
+  - 更新 `sub-agent 使用指南.instructions.md`，新增两个 agent 的属性表和更新委派决策速查树
+- **设计要点**：
+  - **Search-readonly**：纯只读，无 `execute` 工具，无法执行任何终端命令；专注文件读写、搜索和网页浏览
+  - **Search-command**：有 `execute` 工具但严格限定为读取型命令（`Select-String`/`Get-ChildItem`/`git log` 等），附完整禁止/允许命令清单
+  - 两个 agent 都包含结构化输出模板（`[SEARCH_RESULT]`），便于上级 agent 程序化读取
+  - 均设为 `user-invocable: true`，既可作为 sub-agent 调用，也可在代理选择器中直接选择使用
+
+### 2026-07-06 — Explore agent 状态确认
+
+- **事实记录**：
+  - Copilot Chat 0.38 (2026-03-05) 发布说明中记载了 Explore subagent 的引入，原用于 Plan agent 委派代码库搜索。
+  - 2026-07-02 18:57:37，`runSubagent("Explore", ...)` 调用成功并返回结果。
+  - **2026-07-06 上午**，`runSubagent("Explore", ...)` 调用成功（"Explore inference webui code"）。
+  - **2026-07-06 下午**，`runSubagent("Explore", ...)` 调用失败（"Explore 暂时不可用"）。
+  - 两次调用在同一 VS Code 版本（1.127.0 / Copilot Chat 0.55.0）下，一次成功一次失败。
+  - 搜索了 VS Code 安装目录、prompts 目录、所有扩展目录，均未找到名为 Explore 的 agent 定义文件（.agent.md 或其他形式）。
+- **操作**：
+  - `sub-agent 使用指南.instructions.md`：将 Explore 标记为"已不可用"，说明当前无法调用，列出替代方式
+
+### 2026-07-06 — 结构化改造「AI agent 通用要求.instructions.md」
+
+- **操作目的**：将上一步的 Markdown 表格规则进一步改造为 YAML 结构化格式，嵌入 Markdown 代码块中，使 AI 可直接解析为内部决策表。
+- **操作方法**：重写 `AI agent 通用要求.instructions.md`，将 9 条行为规则组织为 YAML `rules` 数组，每条规则用键值对定义 `id/priority/when/do/details` 等字段；C007（提问）与旧 C008（输入栏）合并为 `C007 + C007a` 父子结构；C011（文件索引）移出规则列表，作为独立参考章节置于末尾。
+- **变更要点**：
+  - Markdown 表格 → YAML 代码块（`rules` 数组）
+  - 规则编号精简：C001~C010 → C001~C009（合并 C007↔旧 C008）
+  - 父子规则结构：C007（提问）内嵌 C007a（输入栏要求）
+  - `skip_when` 字段：C003 测试报告明确排除纯语法验证
+  - `forbid` 字段：明确定义禁止行为（猜测/默认值/开新终端）
+  - 文件索引从规则中移出，独立为"项目上下文文件索引"章节
