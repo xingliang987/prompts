@@ -34,7 +34,7 @@ applyTo: **
 | **边界** | 只执行读取型命令（grep/find/git log等），不修改任何文件或系统状态 |
 | **调用示例** | `runSubagent("Search-command", "在所有 Python 文件中搜索 'def handle_' 开头的函数")` |
 
-### RemoteInfoCollector — 远端信息搜集
+### Search-remote — 远端信息搜集
 
 | 属性 | 说明 |
 |------|------|
@@ -42,7 +42,7 @@ applyTo: **
 | **适用场景** | 检查远端系统状态、远端代码、查看远端日志、排查错误、收集环境配置、联动 web 搜索 |
 | **工具** | `[read, search, execute, web]` — 可 SSH、可搜索、可抓网页 |
 | **边界** | 纯只读，不修改远端任何文件或配置 |
-| **调用示例** | `runSubagent("RemoteInfoCollector", "检查 192.168.1.100 的系统状态和 ROS2 日志")` |
+| **调用示例** | `runSubagent("Search-remote", "检查 192.168.1.100 的系统状态和 ROS2 日志")` |
 
 
 ## 委派决策速查
@@ -50,7 +50,7 @@ applyTo: **
 ```
 任务需要纯读本地/网络信息？         → Search-readonly（读/搜/网页）
 任务需要命令行高效搜索本地？        → Search-command（grep/git/find）
-任务需要 SSH 到远端查状态、搜信息？  → RemoteInfoCollector
+任务需要 SSH 到远端查状态、搜信息？  → Search-remote
 以上都不匹配？                      → 当前 agent 自行处理
 ```
 

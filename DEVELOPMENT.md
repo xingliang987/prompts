@@ -18,6 +18,13 @@
   - 路径从 `.github/instructions/` → 项目根目录
   - 文件产出清单树形结构调整，TAKEOVER 移出 `.github/instructions/` 层级
 
+### 2026-07-10 — 更新 C006 README 同步规则，新增 C011 阅读 README 规则
+
+- **操作目的**：使 C006 与 coding-method SKILL 的 README 规范保持一致；新增 SHOULD 级规则要求 AI 阅读代码前先阅览 README
+- **操作方法**：
+  1. 更新 C006：将触发条件从泛化的"实现新功能后"改为明确的触发场景列表（新增文件/节点、修改通信接口、变更工作流程等），补充 skip_when 和 forbid
+  2. 新增 C011：SHOULD 级规则，进入新项目前优先查看 README.md 了解全局
+
 ### 2026-07-02 — 简化「远程开发指南.instructions.md」
 
 - **操作目的**：将远程开发指南大幅精简，保留核心原则与工作流主干，去除过多细节规则与示范。
@@ -43,20 +50,20 @@
 - **变更文件**：`AI agent 通用要求.instructions.md`
 - **规则内容**：同一任务下优先使用 `mode="async"`，复用已有终端，保持终端环境和工作目录的连续性。
 
-### 2026-07-03 — 新增 RemoteInfoCollector 自定义 agent
+### 2026-07-03 — 新增 Search-remote 自定义 agent（原名 RemoteInfoCollector）
 
 - **操作目的**：创建一个专用 sub-agent，用于在远端设备上搜集信息（系统状态、日志、配置、进程等），设计原则为"严边界，宽行为"——在禁止修改/删除/安装等破坏性操作的前提下，允许自由 SSH 连接远端、执行诊断命令、搜索网络。
-- **操作方法**：在 `prompts/` 目录下创建 `RemoteInfoCollector.agent.md`，配置 `tools: [read, search, execute, web]`，包含完整的禁止行为清单、允许行为清单、SSH 操作规范、常用诊断命令速查表和结构化输出模板。
+- **操作方法**：在 `prompts/` 目录下创建 `RemoteInfoCollector.agent.md`（后更名为 `Search-remote.agent.md`），配置 `tools: [read, search, execute, web]`，包含完整的禁止行为清单、允许行为清单、SSH 操作规范、常用诊断命令速查表和结构化输出模板。
 - **设计要点**：
   - **严边界**：明确禁止修改文件、安装软件包、修改配置、启停服务、执行破坏性命令、修改本地文件、写入数据库等 7 类操作
   - **宽行为**：允许 SSH 连接、查看系统状态、读日志/配置、检查网络/硬件、环境信息收集、本地文件读取、网络搜索、Git 只读查询等 8 类操作
   - 参考 `remote-dev` SKILL 的 SSH 工作流模式（超时设置、终端复用等）
   - `user-invocable: true`，支持作为 sub-agent 被调用，也支持在代理选择器中直接选择使用
 
-### 2026-07-03 — 重构 RemoteInfoCollector 输出格式：只给事实，支持上级指定收集范围
+### 2026-07-03 — 重构 Search-remote（原 RemoteInfoCollector）输出格式：只给事实，支持上级指定收集范围
 
 - **操作目的**：优化 sub-agent 的输出格式，使其更适合上级 agent 程序化读取；删除分析建议类输出，仅返回结构化事实数据；新增 `--collect=<类别>` 支持上级按需指定返回类别。
-- **操作方法**：重写 `RemoteInfoCollector.agent.md` 第4步（结构化汇总）的输出模板，将原自然语言段落改为 `[COLLECT_RESULT]` / `=== 区块 ===` 的键值对格式，每个区块按类别组织（SYSTEM、RESOURCE、PROCESS、LOG、NETWORK、HARDWARE、ENV、CONFIG），同时移除原"分析建议"和"参考链接"部分，以 `[WEB_REF]` 轻量替代网络引用。新增 `--collect=<类别>` 指令支持上级按需筛选返回内容。
+- **操作方法**：重写 `Search-remote.agent.md`（原名 `RemoteInfoCollector.agent.md`）第4步（结构化汇总）的输出模板，将原自然语言段落改为 `[COLLECT_RESULT]` / `=== 区块 ===` 的键值对格式，每个区块按类别组织（SYSTEM、RESOURCE、PROCESS、LOG、NETWORK、HARDWARE、ENV、CONFIG），同时移除原"分析建议"和"参考链接"部分，以 `[WEB_REF]` 轻量替代网络引用。新增 `--collect=<类别>` 指令支持上级按需筛选返回内容。
 - **变更要点**：
   - 自然语言报告 → 结构化键值区块格式
   - 移除"分析建议""参考链接"→ 改为仅 `[WEB_REF]` 列出 URL
@@ -67,7 +74,7 @@
 - **操作目的**：将 sub-agent 列表从 `AI agent 通用要求.instructions.md` 中分离出来，创建独立的 `sub-agent 使用指南.instructions.md`，集中管理所有可用 sub-agent 的用途、场景和调用方式；同时统一要求所有 sub-agent 调用时必须指定 `DeepSeek V4 Flash (copilot)` 模型。
 - **操作方法**：
   - `AI agent 通用要求.instructions.md`：将 sub-agent 表格替换为指向新指南文件的一行引用，保留"优先使用 sub-agent"的规则不变
-  - 新建 `sub-agent 使用指南.instructions.md`：包含总则、3个可用 agent 的详细属性表（Explore / RemoteInfoCollector / Study）、委派决策速查和注意事项
+  - 新建 `sub-agent 使用指南.instructions.md`：包含总则、3个可用 agent 的详细属性表（Explore / Search-remote(原 RemoteInfoCollector) / Study）、委派决策速查和注意事项
 - **变更要点**：
   - sub-agent 列表从通用要求中解耦，后续新增 agent 只需更新使用指南即可
   - 新增模型指定规则：所有 sub-agent 调用必须传 `model="DeepSeek V4 Flash (copilot)"`
@@ -91,6 +98,17 @@
 
 - **事实记录**：
   - Copilot Chat 0.38 (2026-03-05) 发布说明中记载了 Explore subagent 的引入，原用于 Plan agent 委派代码库搜索。
+
+### 2026-07-10 — 远程开发模式A新增独立测试分支规则（修订）
+
+- **操作目的**：在远程开发指南和 remote-dev SKILL 的模式A（Git 全流程）中新增规则——AI 自主进行的任何提交和推送都必须在临时分支上进行，不得直接修改主分支或正式分支；测试完成后由用户手动 squash 合并。
+- **操作方法**：
+  1. 修改 `prompts/远程开发指南.instructions.md` — 在「开发模式」章节的模式A描述下新增「测试分支规则」子项
+  2. 修改 `.agents/skills/remote-dev/SKILL.md` — 在「第 5 步 - 模式A - Git 操作规范」中新增测试分支规则
+- **变更要点**：
+  - AI 自主进行的任何提交和推送必须在临时分支（如 `test/xxx-feature`）上进行
+  - 严禁直接修改主分支或正式分支
+  - 测试完成后由用户手动合并，AI 在会话结束时提供 squash 合并命令
   - 2026-07-02 18:57:37，`runSubagent("Explore", ...)` 调用成功并返回结果。
   - **2026-07-06 上午**，`runSubagent("Explore", ...)` 调用成功（"Explore inference webui code"）。
   - **2026-07-06 下午**，`runSubagent("Explore", ...)` 调用失败（"Explore 暂时不可用"）。
@@ -110,3 +128,17 @@
   - `skip_when` 字段：C003 测试报告明确排除纯语法验证
   - `forbid` 字段：明确定义禁止行为（猜测/默认值/开新终端）
   - 文件索引从规则中移出，独立为"项目上下文文件索引"章节
+
+### 2026-07-14 — 新增 C000 会话启动自检规则到「AI agent 通用要求.instructions.md」
+
+- **操作目的**：在规则列表最前面新增一条 MUST 级规则，要求 AI agent 在每次会话开始时完整回顾本通用规则文件中的所有规则，确保全程遵守。
+- **操作方法**：在 `AI agent 通用要求.instructions.md` 的 YAML `rules` 数组顶部插入 `C000` 条目，位于原 `C001`（注释规则）之前。
+- **变更要点**：
+  - 新增 `C000` 规则：`when: 每次会话开始时` → `do: 完整回顾本文件中所有规则`
+
+### 2026-07-14 — 新增 C012 会话结束合规检查规则到「AI agent 通用要求.instructions.md」
+
+- **操作目的**：在规则列表末尾新增一条 MUST 级规则，要求 AI agent 在每次会话结束前依次检查是否遵守了本文件所有规则，若有遗漏则补充执行或说明原因，形成"启动回顾→过程落实→结束检查"的闭环。
+- **操作方法**：在 `AI agent 通用要求.instructions.md` 的 YAML `rules` 数组末尾（C010 之后）插入 `C012` 条目。
+- **变更要点**：
+  - 新增 `C012` 规则：`when: 每次会话结束前` → `do: 依次检查会话过程中是否遵守了每条规则，若有遗漏则补充执行或说明原因`

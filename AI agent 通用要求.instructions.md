@@ -11,6 +11,13 @@ AI agent 行为规则清单（YAML 结构化）。每条规则定义 `when → d
 # ===== 行为规则 (MUST/SHOULD) =====
 rules:
 
+  # --- 会话启动自检 ---
+  - id: C000
+    priority: MUST
+    when: 每次会话开始时
+    do: 在思维链（thinking）中完整复述本文件所有规则的 id、标题及核心 do 内容，不得省略或概括；完成后方可回应首个用户请求
+    goal: 通过思维链中逐条复述规则全文，确保每条规则都已加载到本次会话的推理上下文中，杜绝"回顾了但没想起来用"
+
   # --- 注释 ---
   - id: C001
     priority: SHOULD
@@ -69,10 +76,29 @@ rules:
   # --- README 同步 ---
   - id: C006
     priority: MUST
-    when: 实现新功能后
-    do: 更新 README.md（不存在则创建），保持文档与代码同步
+    when: 代码改动涉及 README.md 内容的触发场景（新增文件/节点、修改通信接口、变更工作流程、修改配置项或启动方式、新增测试等）
+    do: 同步更新项目根目录 README.md 的对应章节，并在变更记录表中追加新行
     details:
-      readme_content: [功能说明, 使用示例, 使用指南, 主要通信接口说明]
+      create_if_missing: true
+      readme_template: coding-method SKILL 的 examples/README_TEMPLATE.md
+      trigger_scenarios:
+        - 新项目创建 → 从头编写完整 README.md
+        - 新增程序文件/节点 → 补充文件结构和程序框架章节
+        - 新增/修改 CLI 命令 → 同步使用方法章节
+        - 修改通信接口 → 更新通信框架章节
+        - 修改工作流程 → 更新工作流程章节
+        - 修改配置项或启动方式 → 更新使用方法章节
+        - 新增测试 → 更新测试章节
+    skip_when: 纯内部重构或微调，不涉及用户可见接口（不触发上述任一场景）
+    forbid: 触发场景内"只改代码不更新 README"
+
+  # --- 阅读 README ---
+  - id: C011
+    priority: SHOULD
+    when: 进入新项目或新目录进行代码阅读、修改或开发前
+    do: 优先查看项目根目录下是否存在 README.md，存在则先快速通读，了解项目用途、结构、工作流程和使用方法后再操作代码
+    goal: 获取项目全局认知，避免在不了解上下文的情况下盲目修改或理解偏差
+    skip_when: 项目入口文件/说明已由用户直接提供且无需额外阅读
 
   # --- 信息缺失处理与提问 ---
   - id: C007
@@ -111,11 +137,28 @@ rules:
     reason: 隔离上下文消耗，避免主对话膨胀
     then: sub-agent 返回精炼结果后，由 main agent 整合使用
     ref: sub-agent 使用指南.instructions.md
-```
 
----
+  # --- Git 提交说明 ---
+  - id: C010
+    priority: MUST
+    when: 在任何项目目录中进行代码修改（创建/编辑/删除/移动文件）后
+    do: 在当前回答中提供 Git 提交说明，供用户参考执行 git commit
+    details:
+      commit_message:
+        format: 使用 Conventional Commits 规范（如 feat/fix/refactor/docs/chore + 简短描述）
+        lang: zh-cn
+        body: 可选，列举主要变更点
+      write_to: 会话结束时在 DEVELOPMENT.md 中记录本次操作概述后附上建议的 git commit 命令
+    notes: |
+      操作用户本地 Git 仓库中的代码时，git add/commit 由用户手动执行，
+      AI 仅提供 commit message 供用户参考。不要擅自执行 git add 或 git commit。
 
-## 项目上下文文件索引
+  # --- 会话结束合规检查 ---
+  - id: C012
+    priority: MUST
+    when: 每次会话结束前
+    do: 依次检查会话过程中是否遵守了本文件每条规则，若有遗漏则补充执行或在下条回答中说明原因
+    goal: 确保规则不仅被回顾，还被落实
 
 以下文件存在于项目目录中，供 AI agent 作为上下文信息参考：
 
