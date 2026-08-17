@@ -8,6 +8,20 @@
 
 ## 操作记录
 
+### 2026-08-17_14:36:54 — 新增 C015 禁止否定-转折句式规则
+
+- **操作目的**：新增规则，禁止 AI 在输出任何回答内容时使用"不是...而是..."及类似变体句式，改用肯定句直接陈述事实或结论。
+- **操作方法**：在 `AI agent 通用要求.instructions.md` 的 C014 规则之后新增 C015 规则项。
+- **变更文件**：`AI agent 通用要求.instructions.md`
+- **规则内容**：禁止"不是 A，而是 B"式否定-转折表达，直接陈述结论。
+
+### 2026-08-13_10:28:14 — 新增 C014 聊天框示意图格式规则
+
+- **操作目的**：新增规则，要求 AI 在 Copilot 聊天框内输出结构示意图时禁止使用 mermaid，一律使用纯字符图；输出对象不是聊天框（如写入 .md 文档）时不受限制。
+- **操作方法**：在 `AI agent 通用要求.instructions.md` 的 C013 规则之后新增 C014 规则项。
+- **变更文件**：`AI agent 通用要求.instructions.md`
+- **规则内容**：聊天框内结构示意图一律用纯字符图，禁止 `mermaid` 代码块；写入文件（.md/README/报告）时不受限制。
+
 ### 2026-07-02 — 修改 project-takeover SKILL：TAKEOVER 改为常规 .md 并移至项目根目录
 
 - **操作目的**：将 TAKEOVER 产出物从 `.github/instructions/TAKEOVER.instructions.md` 改为项目根目录的 `TAKEOVER.md`（常规 Markdown 文件），不再放入 `.github/instructions/` 目录。
