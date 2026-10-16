@@ -23,14 +23,16 @@ rules:
   - id: C002
     priority: MUST
     when: 在任何项目目录中进行文件创建/删除/移动、代码编写/删改
-    do: 将操作概述写入项目根目录 DEVELOPMENT.md
+    do: 将操作概述写入 DEVELOPMENT.md
     details:
       file: DEVELOPMENT.md
       create_if_missing: true
-      content: [操作目的, 操作方法]
+      content: [目标仓库, 操作目的, 操作方法]
       sort: 按时间顺序
       timestamp_format: YYYY-MM-DD_HH:mm:ss
       write_time: 每次会话结束前
+    location_ref: C019
+    note: 文件名为 DEVELOPMENT.md，存放位置按 C019 决议；已存在的 DEVELOPMENT.md 保持原位
     notes: 也可记录开发过程中的必要信息和注意事项
     sub_rules:
       - id: C002a
@@ -41,27 +43,59 @@ rules:
         when: 写入 DEVELOPMENT.md 新记录时
         do: 将新内容插入到文件最上方（标题之下、已有记录之上），保证文件开头为最新内容、末尾为最旧内容
         forbid: 追加到文件末尾
+      - id: C002c
+        when: 写入 DEVELOPMENT.md 新记录时
+        do: 在记录中标明本次操作的目标仓库（仓库名或仓库目录路径）
+        reason: 多个仓库共用同一 DEVELOPMENT.md 时避免记录混淆、便于按仓库区分
 
   # --- 测试报告 ---
   - id: C003
     priority: MUST
     when: 完成测试任务后
     skip_when: 纯语法验证或构建
-    do: 在项目 reports/ 目录下生成 .md 测试报告
+    do: 在 reports/ 目录下生成 .md 测试报告
     details:
       create_dir_if_missing: true
       lang: zh-cn
       content_sections: [测试目的, 测试方法, 测试结果, 结论]
     minimum: 至少包含一个时间戳
+    location_ref: C019
+    note: 目录名 reports/ 不变，存放位置按 C019 决议
 
   # --- 用户要求报告 ---
   - id: C004
     priority: MUST
     when: 用户要求撰写报告
-    do: 在项目根目录 reports/ 下生成 .md 报告
+    do: 在 reports/ 目录下生成 .md 报告
     details:
       create_dir_if_missing: true
     minimum: 至少包含一个时间戳
+    location_ref: C019
+    note: 目录名 reports/ 不变，存放位置按 C019 决议
+
+  # --- AI 文档存放规则 ---
+  - id: C019
+    priority: MUST
+    when: 需要新建任一 AI 开发文档
+    scope: [PLAN.md, DEVELOPMENT.md, TAKEOVER.md, TEST.md, reports/ 报告目录, 文档/documents/ 等文档目录, 待办目录]
+    do_not_cover: [README.md]
+    do: 按 location_decision 顺序决议存放位置，选择第一个可用项
+    location_decision:
+      - step1: 用户在本次任务中明确指定的位置
+      - step2: 仓库根目录的直接上级目录（如仓库为 ~/a/b/ 则检查 ~/a/）是非仓库目录时，存放于该目录
+      - step3: 项目内已存在的专用工作目录（workspace/、work/ 及同类已存在目录），直接复用
+      - step4: 以上均不存在时，询问用户是否按约定默认名 workspace/ 或 work/ 创建专用目录，仅用户确认后创建
+      - step5: 兜底暂存项目根目录，并在回答中告知用户及原因
+    detection: 检测目录是否为 Git 仓库（目录内存在 .git/ 或 git rev-parse --show-toplevel 落在该目录范围内）
+    forbid:
+      - 在 Git 仓库的项目根目录直接创建上述新文档（防止误提交）
+      - 为一个已存在的文档重新决议存放位置
+      - 仓库直接上级为 Git 仓库时仍存放到该上级目录
+    skip_when: 文档已存在时保持原位，不迁移（内容更新同样适用）
+    goal: AI 开发文档默认存放于仓库外部，防止被误提交
+    notes:
+      - 存放于专用目录内时按文档类型分子目录：workspace/DEVELOPMENT.md、workspace/reports/<报告>.md、workspace/待办/、workspace/文档/
+      - 本机示例：仓库为 C:\Users\xingl\Desktop\notebook 时，新文档候选位置依次为 C:\Users\xingl\Desktop\（直接上级）、C:\Users\xingl\Desktop\notebook\workspace\
 
   # --- 功能复用 ---
   - id: C005
@@ -82,7 +116,7 @@ rules:
         - 新项目创建 → 从头编写完整 README.md
         - 新增程序文件/节点 → 补充文件结构和程序框架章节
         - 新增/修改 CLI 命令 → 同步使用方法章节
-        - 修改通信接口 → 更新通信框架章节
+        - 修改外部通信接口 → 更新通信框架章节
         - 修改工作流程 → 更新工作流程章节
         - 修改配置项或启动方式 → 更新使用方法章节
         - 新增测试 → 更新测试章节
@@ -222,6 +256,8 @@ rules:
         do: 注明其来源（如所在文件、模块或代码位置），便于用户定位核对
 
 以下文件存在于项目目录中，供 AI agent 作为上下文信息参考：
+
+> 注：上表中 AI 开发文档（PLAN.md 至 待办目录等）的存放位置按 C019 决议，已存在的文档保持原位；`README.md` 始终位于仓库根目录、不适用 C019。
 
 | 文件 | 用途说明 |
 |------|----------|
